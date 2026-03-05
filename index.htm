@@ -154,6 +154,12 @@
             color: #333;
         }
         .btn-reset:hover { background-color: #e0a800; }
+        
+        /* Novo estilo para o botão do Checklist */
+        .btn-checklist {
+            background-color: #6f42c1;
+        }
+        .btn-checklist:hover { background-color: #5a32a3; }
 
         .actions-bar {
             display: flex;
@@ -259,6 +265,8 @@
             <button class="btn-action" onclick="gerarFolha()">Gerar Folha</button>
             <button class="btn-action btn-pdf" onclick="gerarPDF()">Gerar PDF</button>
             <button class="btn-action btn-reset" onclick="resetarDados()">↻ Resetar</button>
+            <!-- Novo botão do Checklist -->
+            <button class="btn-action btn-checklist" onclick="abrirChecklist()">📋 Check List</button>
         </div>
     </div>
 
@@ -837,6 +845,12 @@
             console.error('Erro ao gerar PDF:', error);
             alert('Erro ao gerar o PDF. Tente novamente.');
         }
+    }
+
+    // Nova função para abrir o Checklist
+    function abrirChecklist() {
+        window.open('https://usa24hs.github.io/Check-List-/', '_blank');
+        mostrarToast('✓ Abrindo Check List');
     }
 
     // Adiciona evento para salvar dados quando qualquer input for alterado
