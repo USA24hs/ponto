@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Folha de Ponto - PDF</title>
+    <!-- Biblioteca para gerar PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Calibri', 'Aptos Narrow', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .header h1 { margin: 0; font-size: 18px; text-transform: uppercase; }
+        .header p { margin: 5px 0 0; font-size: 12px; }
+        
+        .info-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+        .info-group {
+            display: flex;
+            gap: 5px;
+        }
+        .info-label { font-weight: bold; }
+        
+        .periodo {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
+            margin: 15px 0;
+            padding: 5px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+        }
+        
+        .config-panel {
+            background: #e9e9e9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+        }
+
+        .edit-panel {
+            background: #d9e6f2;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #004080;
+        }
+        .edit-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #004080;
+        }
+        .edit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .periodo-edit {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            margin-top: 10px;
+        }
+        .periodo-edit > div {
+            flex: 1;
+        }
+        
+        label { display: block; font-weight: bold; font-size: 12px; margin-bottom: 3px; }
+        input, select, textarea {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 4px 2px;
+            text-align: center;
+        }
+        th { background-color: #f2f2f2; }
+        
+        .work-day { background-color: #e6f7ff; }
+        .exit-day { background-color: #fff0e6; }
+        
+        .signature-block {
+            margin-top: 30px;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .btn-action {
+            background-color: #004080;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .btn-action:hover { background-color: #003366; }
+        .btn-pdf {
+            background-color: #b30000;
+        }
+        .btn-pdf:hover { background-color: #800000; }
+        .btn-edit {
+            background-color: #4CAF50;
+        }
+        .btn-edit:hover { background-color: #45a049; }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover { background-color: #218838; }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            justify-content: flex-end;
+        }
+
+        .edit-toggle {
+            cursor: pointer;
+            color: #004080;
+            font-size: 12px;
+            text-decoration: underline;
+            margin-bottom: 10px;
+            display: inline-block;
+            margin-right: 15px;
+        }
+
+        /* Estilo para impressão/PDF */
+        #pdf-content {
+            width: 100%;
+        }
+        
+        .page-break {
+            page-break-after: always;
+        }
+
+        @media print {
+            body { background: none; }
+            .container { box-shadow: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
+            .config-panel, .actions-bar, .edit-panel, .edit-toggle, .btn-action { display: none; }
+            #pdf-content { margin: 0; padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Cabeçalho da Empresa (Fora do PDF para edição) -->
+    <div class="header" id="empresa-header">
+        <h1>LEFE EMERGENCIAS MEDICAS LTDA</h1>
+        <p>CNPJ: 11.204.117/0001-03</p>
+        <p>RUA GENERAL ANDRADE NEVES, 306 - SAO DOMINGOS - CEP 24.210-000</p>
+    </div>
+
+    <!-- Painel de Configuração -->
+    <div class="config-panel">
+        <div>
+            <label>Mês/Ano:</label>
+            <input type="month" id="inputMesAno" value="2026-03">
+        </div>
+        <div>
+            <label>Primeiro Dia de Trabalho:</label>
+            <select id="inputDiaInicio"></select>
+        </div>
+        <div>
+            <label>Horário Entrada:</label>
+            <input type="time" id="inputEntrada" value="07:00">
+        </div>
+        <div>
+            <label>Horário Saída:</label>
+            <input type="time" id="inputSaida" value="07:00">
+        </div>
+        <div>
+            <label>Início Intervalo:</label>
+            <input type="time" id="inputIntInicio" value="12:00">
+        </div>
+        <div>
+            <label>Fim Intervalo:</label>
+            <input type="time" id="inputIntFim" value="13:00">
+        </div>
+        <div>
+            <label>Variação (+/- min):</label>
+            <input type="number" id="inputVariacao" value="15" min="0" max="59">
+        </div>
+        
+        <div class="actions-bar">
+            <button class="btn-action" onclick="gerarFolha()">Gerar Folha</button>
+            <button class="btn-action btn-pdf" onclick="gerarPDF()">Gerar PDF</button>
+        </div>
+    </div>
+
+    <!-- Painel de Edição dos Dados do Funcionário e Período -->
+    <div>
+        <span class="edit-toggle" onclick="toggleEditPanel('funcionario')">✏️ Editar dados do funcionário</span>
+        <span class="edit-toggle" onclick="toggleEditPanel('periodo')">📅 Editar período</span>
+    </div>
+    
+    <!-- Painel de Edição do Funcionário -->
+    <div id="editPanelFuncionario" class="edit-panel" style="display: none;">
+        <h3>Editar Dados do Funcionário</h3>
+        <div class="edit-grid">
+            <div>
+                <label>Nome Completo:</label>
+                <input type="text" id="editNome" value="SEU NOME COMPLETO– MATª 000">
+            </div>
+            <div>
+                <label>Admissão:</label>
+                <input type="text" id="editAdmissao" value="00/00/2020">
+            </div>
+            <div>
+                <label>Cargo:</label>
+                <input type="text" id="editCargo" value="CONDUTOR DE AMBULANCIA MARANHAO">
+            </div>
+            <div>
+                <label>Escala:</label>
+                <input type="text" id="editEscala" value="24 X 72">
+            </div>
+            <div>
+                <label>Departamento:</label>
+                <input type="text" id="editDepartamento" value="SECRETARIA DO ESTADO DE SAUDE - MARANHAO">
+            </div>
+            <div>
+                <label>Divisão:</label>
+                <input type="text" id="editDivisao" value="SEU POSTO">
+            </div>
+            <div>
+                <label>Pasta:</label>
+                <input type="text" id="editPasta" value="MARANHAO">
+            </div>
+        </div>
+        <div style="margin-top: 10px; text-align: right;">
+            <button class="btn-action btn-success" onclick="salvarDadosFuncionario()">Salvar Alterações</button>
+        </div>
+    </div>
+
+    <!-- Painel de Edição do Período -->
+    <div id="editPanelPeriodo" class="edit-panel" style="display: none;">
+        <h3>Editar Período</h3>
+        <div class="periodo-edit">
+            <div>
+                <label>Mês (por extenso):</label>
+                <select id="editMesExtenso">
+                    <option value="JANEIRO">JANEIRO</option>
+                    <option value="FEVEREIRO">FEVEREIRO</option>
+                    <option value="MARÇO">MARÇO</option>
+                    <option value="ABRIL">ABRIL</option>
+                    <option value="MAIO">MAIO</option>
+                    <option value="JUNHO">JUNHO</option>
+                    <option value="JULHO">JULHO</option>
+                    <option value="AGOSTO">AGOSTO</option>
+                    <option value="SETEMBRO">SETEMBRO</option>
+                    <option value="OUTUBRO">OUTUBRO</option>
+                    <option value="NOVEMBRO">NOVEMBRO</option>
+                    <option value="DEZEMBRO">DEZEMBRO</option>
+                </select>
+            </div>
+            <div>
+                <label>Dia Início:</label>
+                <input type="number" id="editDiaInicio" min="1" max="31" value="1">
+            </div>
+            <div>
+                <label>Mês Início (numérico):</label>
+                <input type="number" id="editMesInicio" min="1" max="12" value="3">
+            </div>
+            <div>
+                <label>Ano Início:</label>
+                <input type="number" id="editAnoInicio" min="2020" max="2030" value="2026">
+            </div>
+            <div>
+                <label>Dia Fim:</label>
+                <input type="number" id="editDiaFim" min="1" max="31" value="31">
+            </div>
+            <div>
+                <label>Mês Fim (numérico):</label>
+                <input type="number" id="editMesFim" min="1" max="12" value="3">
+            </div>
+            <div>
+                <label>Ano Fim:</label>
+                <input type="number" id="editAnoFim" min="2020" max="2030" value="2026">
+            </div>
+        </div>
+        <div style="margin-top: 10px; text-align: right;">
+            <button class="btn-action btn-success" onclick="salvarPeriodo()">Salvar Período</button>
+        </div>
+    </div>
+    
+    <!-- CONTEÚDO COMPLETO PARA O PDF (inclui cabeçalho da empresa + dados + período + tabela) -->
+    <div id="pdf-content">
+        <!-- Cabeçalho da Empresa (copiado para o PDF) -->
+        <div class="header" id="pdf-header">
+            <h1>LEFE EMERGENCIAS MEDICAS LTDA</h1>
+            <p>CNPJ: 11.204.117/0001-03</p>
+            <p>RUA GENERAL ANDRADE NEVES, 306 - SAO DOMINGOS - CEP 24.210-000</p>
+        </div>
+
+        <!-- Dados do Funcionário -->
+        <div style="font-size: 11px; margin-bottom: 15px;" id="dadosFuncionario">
+            <div class="info-row">
+                <div class="info-group">
+                    <span class="info-label">NOME:</span>
+                    <span id="displayNome">SEU NOME COMPLETO– MATª 000</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">ADMISSÃO:</span>
+                    <span id="displayAdmissao">00/00/2020</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-group">
+                    <span class="info-label">CARGO:</span>
+                    <span id="displayCargo">CONDUTOR DE AMBULANCIA MARANHAO</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">ESCALA:</span>
+                    <span id="displayEscala">24 X 72</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-group">
+                    <span class="info-label">DEPARTAMENTO:</span>
+                    <span id="displayDepartamento">SECRETARIA DO ESTADO DE SAUDE - MARANHAO</span>
+                </div>
+            </div>
+
+            <div class="info-row">
+                <div class="info-group">
+                    <span class="info-label">DIVISÃO:</span>
+                    <span id="displayDivisao">SEU POSTO</span>
+                </div>
+                <div class="info-group">
+                    <span class="info-label">PASTA:</span>
+                    <span id="displayPasta">MARANHAO</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- PERÍODO (editável) -->
+        <div class="periodo" id="periodoDisplay">
+            PERÍODO: MARÇO 01/03/2026 À 31/03/2026
+        </div>
+
+        <!-- Tabela da Folha -->
+        <table id="tabelaFolha">
+            <thead>
+                <tr>
+                    <th>Dia</th>
+                    <th>Entrada</th>
+                    <th>Início Intervalo</th>
+                    <th>Fim Intervalo</th>
+                    <th>Saída</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <div class="signature-block">
+            <div>DATA: _____/_____/_____ ASSINATURA DO FUNCIONÁRIO: ____________________</div>
+            <div>ASSINATURA DO SUPERIOR: ____________________</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Popula o seletor de dias
+    const selectDia = document.getElementById('inputDiaInicio');
+    for(let i=1; i<=31; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.text = i;
+        selectDia.appendChild(opt);
+    }
+
+    // Nomes dos meses em português
+    const nomesMeses = [
+        'JANEIRO', 'FEVEREIRO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+        'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO'
+    ];
+
+    // Função para alternar visibilidade dos painéis de edição
+    function toggleEditPanel(tipo) {
+        if (tipo === 'funcionario') {
+            const panel = document.getElementById('editPanelFuncionario');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                // Fecha o outro painel se estiver aberto
+                document.getElementById('editPanelPeriodo').style.display = 'none';
+                panel.style.display = 'block';
+                carregarDadosParaEdicao();
+            } else {
+                panel.style.display = 'none';
+            }
+        } else if (tipo === 'periodo') {
+            const panel = document.getElementById('editPanelPeriodo');
+            if (panel.style.display === 'none' || panel.style.display === '') {
+                // Fecha o outro painel se estiver aberto
+                document.getElementById('editPanelFuncionario').style.display = 'none';
+                panel.style.display = 'block';
+                carregarDadosPeriodoParaEdicao();
+            } else {
+                panel.style.display = 'none';
+            }
+        }
+    }
+
+    // Carrega os dados atuais para os campos de edição do funcionário
+    function carregarDadosParaEdicao() {
+        document.getElementById('editNome').value = document.getElementById('displayNome').innerText;
+        document.getElementById('editAdmissao').value = document.getElementById('displayAdmissao').innerText;
+        document.getElementById('editCargo').value = document.getElementById('displayCargo').innerText;
+        document.getElementById('editEscala').value = document.getElementById('displayEscala').innerText;
+        document.getElementById('editDepartamento').value = document.getElementById('displayDepartamento').innerText;
+        document.getElementById('editDivisao').value = document.getElementById('displayDivisao').innerText;
+        document.getElementById('editPasta').value = document.getElementById('displayPasta').innerText;
+    }
+
+    // Carrega os dados do período para edição
+    function carregarDadosPeriodoParaEdicao() {
+        const periodoText = document.getElementById('periodoDisplay').innerText;
+        // Formato esperado: "PERÍODO: MARÇO 01/03/2026 À 31/03/2026"
+        const matches = periodoText.match(/PERÍODO:\s*(\w+)\s+(\d{2})\/(\d{2})\/(\d{4})\s+À\s+(\d{2})\/(\d{2})\/(\d{4})/);
+        
+        if (matches) {
+            const mesExtenso = matches[1];
+            const diaInicio = parseInt(matches[2]);
+            const mesInicio = parseInt(matches[3]);
+            const anoInicio = parseInt(matches[4]);
+            const diaFim = parseInt(matches[5]);
+            const mesFim = parseInt(matches[6]);
+            const anoFim = parseInt(matches[7]);
+            
+            document.getElementById('editMesExtenso').value = mesExtenso;
+            document.getElementById('editDiaInicio').value = diaInicio;
+            document.getElementById('editMesInicio').value = mesInicio;
+            document.getElementById('editAnoInicio').value = anoInicio;
+            document.getElementById('editDiaFim').value = diaFim;
+            document.getElementById('editMesFim').value = mesFim;
+            document.getElementById('editAnoFim').value = anoFim;
+        }
+    }
+
+    // Salva os dados editados do funcionário
+    function salvarDadosFuncionario() {
+        document.getElementById('displayNome').innerText = document.getElementById('editNome').value;
+        document.getElementById('displayAdmissao').innerText = document.getElementById('editAdmissao').value;
+        document.getElementById('displayCargo').innerText = document.getElementById('editCargo').value;
+        document.getElementById('displayEscala').innerText = document.getElementById('editEscala').value;
+        document.getElementById('displayDepartamento').innerText = document.getElementById('editDepartamento').value;
+        document.getElementById('displayDivisao').innerText = document.getElementById('editDivisao').value;
+        document.getElementById('displayPasta').innerText = document.getElementById('editPasta').value;
+        
+        // Fecha o painel após salvar
+        document.getElementById('editPanelFuncionario').style.display = 'none';
+        
+        // Mostra mensagem de confirmação
+        alert('Dados do funcionário atualizados com sucesso!');
+    }
+
+    // Salva o período editado
+    function salvarPeriodo() {
+        const mesExtenso = document.getElementById('editMesExtenso').value;
+        const diaInicio = String(document.getElementById('editDiaInicio').value).padStart(2, '0');
+        const mesInicio = String(document.getElementById('editMesInicio').value).padStart(2, '0');
+        const anoInicio = document.getElementById('editAnoInicio').value;
+        const diaFim = String(document.getElementById('editDiaFim').value).padStart(2, '0');
+        const mesFim = String(document.getElementById('editMesFim').value).padStart(2, '0');
+        const anoFim = document.getElementById('editAnoFim').value;
+        
+        const periodoFormatado = `PERÍODO: ${mesExtenso} ${diaInicio}/${mesInicio}/${anoInicio} À ${diaFim}/${mesFim}/${anoFim}`;
+        document.getElementById('periodoDisplay').innerText = periodoFormatado;
+        
+        // Atualiza também o input de mês/ano para manter consistência
+        document.getElementById('inputMesAno').value = `${anoInicio}-${mesInicio}`;
+        
+        // Fecha o painel após salvar
+        document.getElementById('editPanelPeriodo').style.display = 'none';
+        
+        // Mostra mensagem de confirmação
+        alert('Período atualizado com sucesso!');
+        
+        // Regenera a folha com o novo mês/ano
+        gerarFolha();
+    }
+
+    // Função auxiliar para variação
+    function variarHorario(horaBase, variacaoMax) {
+        if (!horaBase || horaBase === "") return "-";
+        let minVariar = Math.floor(Math.random() * (variacaoMax * 2 + 1)) - variacaoMax;
+        let [horas, minutos] = horaBase.split(':').map(Number);
+        let totalMinutos = horas * 60 + minutos;
+        totalMinutos += minVariar;
+        
+        if (totalMinutos < 0) totalMinutos += 1440;
+        if (totalMinutos >= 1440) totalMinutos -= 1440;
+        
+        let novasHoras = Math.floor(totalMinutos / 60);
+        let novosMinutos = totalMinutos % 60;
+        return String(novasHoras).padStart(2, '0') + ':' + String(novosMinutos).padStart(2, '0');
+    }
+
+    // Função para formatar o período
+    function formatarPeriodo(mes, ano) {
+        const mesNome = nomesMeses[mes - 1];
+        const ultimoDia = new Date(ano, mes, 0).getDate();
+        return `PERÍODO: ${mesNome} 01/${String(mes).padStart(2, '0')}/${ano} À ${ultimoDia}/${String(mes).padStart(2, '0')}/${ano}`;
+    }
+
+    function gerarFolha() {
+        const mesAno = document.getElementById('inputMesAno').value;
+        if(!mesAno) { alert("Selecione o Mês e Ano."); return; }
+
+        const [ano, mes] = mesAno.split('-').map(Number);
+        const diaInicio = parseInt(document.getElementById('inputDiaInicio').value);
+        
+        const horaEntradaBase = document.getElementById('inputEntrada').value;
+        const horaSaidaBase = document.getElementById('inputSaida').value;
+        const horaIntInicioBase = document.getElementById('inputIntInicio').value;
+        const horaIntFimBase = document.getElementById('inputIntFim').value;
+        
+        const variacao = parseInt(document.getElementById('inputVariacao').value) || 0;
+
+        const diasNoMes = new Date(ano, mes, 0).getDate();
+        const tbody = document.querySelector('#tabelaFolha tbody');
+        tbody.innerHTML = '';
+
+        // Atualiza o período apenas se ele não foi editado manualmente
+        // Verifica se o período atual corresponde ao mês/ano selecionado
+        const periodoAtual = document.getElementById('periodoDisplay').innerText;
+        const periodoGerado = formatarPeriodo(mes, ano);
+        
+        // Se o período atual não contém o mês/ano atual, atualiza
+        if (!periodoAtual.includes(`${String(mes).padStart(2, '0')}/${ano}`)) {
+            document.getElementById('periodoDisplay').innerText = periodoGerado;
+        }
+
+        // Lógica da Escala 24x72
+        let diasTrabalho = new Array(diasNoMes + 1).fill(0); 
+        let cicloDia = diaInicio;
+        
+        while(cicloDia <= diasNoMes) {
+            if(cicloDia <= diasNoMes) diasTrabalho[cicloDia] = 1; 
+            if((cicloDia + 1) <= diasNoMes) diasTrabalho[cicloDia + 1] = 2; 
+            cicloDia += 4; 
+        }
+
+        const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+        for (let dia = 1; dia <= diasNoMes; dia++) {
+            const data = new Date(ano, mes - 1, dia);
+            const diaSemana = diasSemana[data.getDay()];
+            const tipoDia = diasTrabalho[dia];
+
+            const tr = document.createElement('tr');
+            
+            const tdDia = document.createElement('td');
+            tdDia.innerText = `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano} (${diaSemana})`;
+            tr.appendChild(tdDia);
+
+            if (tipoDia === 1) {
+                // Dia de Entrada
+                tr.classList.add('work-day');
+                let hEntrada = variacao > 0 ? variarHorario(horaEntradaBase, variacao) : horaEntradaBase;
+                let hIntInicio = variacao > 0 ? variarHorario(horaIntInicioBase, variacao) : horaIntInicioBase;
+                let hIntFim = variacao > 0 ? variarHorario(horaIntFimBase, variacao) : horaIntFimBase;
+                
+                tr.innerHTML += `<td><strong>${hEntrada}</strong></td>`;
+                tr.innerHTML += `<td>${hIntInicio}</td>`;
+                tr.innerHTML += `<td>${hIntFim}</td>`;
+                tr.innerHTML += `<td>-</td>`;
+                
+            } else if (tipoDia === 2) {
+                // Dia de Saída
+                tr.classList.add('exit-day');
+                let hSaida = variacao > 0 ? variarHorario(horaSaidaBase, variacao) : horaSaidaBase;
+                
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td><strong>${hSaida}</strong></td>`;
+                
+            } else {
+                // Folga
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td>-</td>`;
+                tr.innerHTML += `<td>-</td>`;
+            }
+
+            tbody.appendChild(tr);
+        }
+    }
+
+    function gerarPDF() {
+        // Garante que a folha está atualizada antes de gerar o PDF
+        gerarFolha();
+        
+        // Sincroniza o cabeçalho do PDF com o cabeçalho visível
+        const headerTitle = document.querySelector('#empresa-header h1').innerText;
+        const headerCnpj = document.querySelector('#empresa-header p:nth-of-type(1)').innerText;
+        const headerEnd = document.querySelector('#empresa-header p:nth-of-type(2)').innerText;
+        
+        document.querySelector('#pdf-header h1').innerText = headerTitle;
+        document.querySelector('#pdf-header p:nth-of-type(1)').innerText = headerCnpj;
+        document.querySelector('#pdf-header p:nth-of-type(2)').innerText = headerEnd;
+        
+        // Usa o elemento completo para o PDF
+        const elemento = document.getElementById('pdf-content');
+        
+        // Configurações otimizadas para o html2pdf
+        const opt = {
+            margin:       [15, 15, 15, 15], // [top, right, bottom, left]
+            filename:     'RENOMEAR.pdf',
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { 
+                scale: 2,
+                letterRendering: true,
+                useCORS: true,
+                logging: false,
+                dpi: 300
+            },
+            jsPDF:        { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'portrait',
+                compress: true
+            },
+            pagebreak: { mode: ['css', 'legacy'] }
+        };
+
+        // Usa html2pdf com tratamento de erro
+        try {
+            html2pdf().set(opt).from(elemento).save();
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            alert('Erro ao gerar o PDF. Tente novamente.');
+        }
+    }
+
+    // Inicializa
+    gerarFolha();
+</script>
+
+</body>
+</html>
