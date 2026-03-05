@@ -87,9 +87,11 @@
             gap: 10px;
             align-items: flex-end;
             margin-top: 10px;
+            flex-wrap: wrap;
         }
         .periodo-edit > div {
             flex: 1;
+            min-width: 120px;
         }
         
         label { display: block; font-weight: bold; font-size: 12px; margin-bottom: 3px; }
@@ -147,12 +149,18 @@
             background-color: #28a745;
         }
         .btn-success:hover { background-color: #218838; }
+        .btn-reset {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .btn-reset:hover { background-color: #e0a800; }
 
         .actions-bar {
             display: flex;
             gap: 10px;
             margin-top: 10px;
             justify-content: flex-end;
+            flex-wrap: wrap;
         }
 
         .edit-toggle {
@@ -179,6 +187,30 @@
             .container { box-shadow: none; width: 100%; max-width: 100%; padding: 0; margin: 0; }
             .config-panel, .actions-bar, .edit-panel, .edit-toggle, .btn-action { display: none; }
             #pdf-content { margin: 0; padding: 15px; }
+        }
+
+        .toast-message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 14px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-in-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -226,6 +258,7 @@
         <div class="actions-bar">
             <button class="btn-action" onclick="gerarFolha()">Gerar Folha</button>
             <button class="btn-action btn-pdf" onclick="gerarPDF()">Gerar PDF</button>
+            <button class="btn-action btn-reset" onclick="resetarDados()">↻ Resetar</button>
         </div>
     </div>
 
@@ -338,7 +371,7 @@
             <div class="info-row">
                 <div class="info-group">
                     <span class="info-label">NOME:</span>
-                    <span id="displayNome">SEU NOME COMPLETO– MATª 000</span>
+                    <span id="displayNome">SEU NOME COMPLETO – MATª 000</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">ADMISSÃO:</span>
@@ -367,7 +400,7 @@
             <div class="info-row">
                 <div class="info-group">
                     <span class="info-label">DIVISÃO:</span>
-                    <span id="displayDivisao">SEU POSTO</span>
+                    <span id="displayDivisao">UNIDADE SEU POSTO</span>
                 </div>
                 <div class="info-group">
                     <span class="info-label">PASTA:</span>
@@ -404,6 +437,143 @@
 </div>
 
 <script>
+    // Chave para o localStorage
+    const STORAGE_KEY = 'folhaPontoDados';
+
+    // Dados padrão
+    const dadosPadrao = {
+        // Dados do funcionário
+        nome: 'SEU NOME COMPLETO– MATª 000',
+        admissao: '00/00/2020',
+        cargo: 'CONDUTOR DE AMBULANCIA MARANHAO',
+        escala: '24 X 72',
+        departamento: 'SECRETARIA DO ESTADO DE SAUDE - MARANHAO',
+        divisao: 'UNIDADE SEU POSTO',
+        pasta: 'MARANHAO',
+        
+        // Dados de configuração
+        mesAno: '2026-03',
+        diaInicio: '1',
+        horaEntrada: '07:00',
+        horaSaida: '07:00',
+        horaIntInicio: '12:00',
+        horaIntFim: '13:00',
+        variacao: '15',
+        
+        // Dados do período
+        mesExtenso: 'MARÇO',
+        diaInicioPeriodo: '1',
+        mesInicioPeriodo: '3',
+        anoInicioPeriodo: '2026',
+        diaFimPeriodo: '31',
+        mesFimPeriodo: '3',
+        anoFimPeriodo: '2026'
+    };
+
+    // Função para mostrar mensagem toast
+    function mostrarToast(mensagem) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.textContent = mensagem;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // Função para salvar todos os dados no localStorage
+    function salvarDados() {
+        const dados = {
+            // Dados do funcionário
+            nome: document.getElementById('displayNome').innerText,
+            admissao: document.getElementById('displayAdmissao').innerText,
+            cargo: document.getElementById('displayCargo').innerText,
+            escala: document.getElementById('displayEscala').innerText,
+            departamento: document.getElementById('displayDepartamento').innerText,
+            divisao: document.getElementById('displayDivisao').innerText,
+            pasta: document.getElementById('displayPasta').innerText,
+            
+            // Dados de configuração
+            mesAno: document.getElementById('inputMesAno').value,
+            diaInicio: document.getElementById('inputDiaInicio').value,
+            horaEntrada: document.getElementById('inputEntrada').value,
+            horaSaida: document.getElementById('inputSaida').value,
+            horaIntInicio: document.getElementById('inputIntInicio').value,
+            horaIntFim: document.getElementById('inputIntFim').value,
+            variacao: document.getElementById('inputVariacao').value,
+            
+            // Dados do período
+            mesExtenso: document.getElementById('editMesExtenso').value,
+            diaInicioPeriodo: document.getElementById('editDiaInicio').value,
+            mesInicioPeriodo: document.getElementById('editMesInicio').value,
+            anoInicioPeriodo: document.getElementById('editAnoInicio').value,
+            diaFimPeriodo: document.getElementById('editDiaFim').value,
+            mesFimPeriodo: document.getElementById('editMesFim').value,
+            anoFimPeriodo: document.getElementById('editAnoFim').value
+        };
+        
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+        mostrarToast('✓ Dados salvos automaticamente');
+    }
+
+    // Função para carregar os dados do localStorage
+    function carregarDados() {
+        const dadosSalvos = localStorage.getItem(STORAGE_KEY);
+        let dados = dadosPadrao;
+        
+        if (dadosSalvos) {
+            try {
+                dados = JSON.parse(dadosSalvos);
+            } catch (e) {
+                console.error('Erro ao carregar dados salvos:', e);
+            }
+        }
+        
+        // Aplicar dados do funcionário
+        document.getElementById('displayNome').innerText = dados.nome || dadosPadrao.nome;
+        document.getElementById('displayAdmissao').innerText = dados.admissao || dadosPadrao.admissao;
+        document.getElementById('displayCargo').innerText = dados.cargo || dadosPadrao.cargo;
+        document.getElementById('displayEscala').innerText = dados.escala || dadosPadrao.escala;
+        document.getElementById('displayDepartamento').innerText = dados.departamento || dadosPadrao.departamento;
+        document.getElementById('displayDivisao').innerText = dados.divisao || dadosPadrao.divisao;
+        document.getElementById('displayPasta').innerText = dados.pasta || dadosPadrao.pasta;
+        
+        // Aplicar dados de configuração
+        document.getElementById('inputMesAno').value = dados.mesAno || dadosPadrao.mesAno;
+        document.getElementById('inputDiaInicio').value = dados.diaInicio || dadosPadrao.diaInicio;
+        document.getElementById('inputEntrada').value = dados.horaEntrada || dadosPadrao.horaEntrada;
+        document.getElementById('inputSaida').value = dados.horaSaida || dadosPadrao.horaSaida;
+        document.getElementById('inputIntInicio').value = dados.horaIntInicio || dadosPadrao.horaIntInicio;
+        document.getElementById('inputIntFim').value = dados.horaIntFim || dadosPadrao.horaIntFim;
+        document.getElementById('inputVariacao').value = dados.variacao || dadosPadrao.variacao;
+        
+        // Aplicar dados do período
+        document.getElementById('editMesExtenso').value = dados.mesExtenso || dadosPadrao.mesExtenso;
+        document.getElementById('editDiaInicio').value = dados.diaInicioPeriodo || dadosPadrao.diaInicioPeriodo;
+        document.getElementById('editMesInicio').value = dados.mesInicioPeriodo || dadosPadrao.mesInicioPeriodo;
+        document.getElementById('editAnoInicio').value = dados.anoInicioPeriodo || dadosPadrao.anoInicioPeriodo;
+        document.getElementById('editDiaFim').value = dados.diaFimPeriodo || dadosPadrao.diaFimPeriodo;
+        document.getElementById('editMesFim').value = dados.mesFimPeriodo || dadosPadrao.mesFimPeriodo;
+        document.getElementById('editAnoFim').value = dados.anoFimPeriodo || dadosPadrao.anoFimPeriodo;
+        
+        // Atualizar o período display
+        const periodo = `PERÍODO: ${dados.mesExtenso || dadosPadrao.mesExtenso} ${String(dados.diaInicioPeriodo || dadosPadrao.diaInicioPeriodo).padStart(2, '0')}/${String(dados.mesInicioPeriodo || dadosPadrao.mesInicioPeriodo).padStart(2, '0')}/${dados.anoInicioPeriodo || dadosPadrao.anoInicioPeriodo} À ${String(dados.diaFimPeriodo || dadosPadrao.diaFimPeriodo).padStart(2, '0')}/${String(dados.mesFimPeriodo || dadosPadrao.mesFimPeriodo).padStart(2, '0')}/${dados.anoFimPeriodo || dadosPadrao.anoFimPeriodo}`;
+        document.getElementById('periodoDisplay').innerText = periodo;
+        
+        mostrarToast('✓ Dados carregados');
+    }
+
+    // Função para resetar para os dados padrão
+    function resetarDados() {
+        if (confirm('Tem certeza que deseja resetar todos os dados para os valores padrão?')) {
+            localStorage.removeItem(STORAGE_KEY);
+            carregarDados(); // Isso vai carregar os dados padrão
+            gerarFolha();
+            mostrarToast('✓ Dados resetados para o padrão');
+        }
+    }
+
     // Popula o seletor de dias
     const selectDia = document.getElementById('inputDiaInicio');
     for(let i=1; i<=31; i++) {
@@ -424,7 +594,6 @@
         if (tipo === 'funcionario') {
             const panel = document.getElementById('editPanelFuncionario');
             if (panel.style.display === 'none' || panel.style.display === '') {
-                // Fecha o outro painel se estiver aberto
                 document.getElementById('editPanelPeriodo').style.display = 'none';
                 panel.style.display = 'block';
                 carregarDadosParaEdicao();
@@ -434,7 +603,6 @@
         } else if (tipo === 'periodo') {
             const panel = document.getElementById('editPanelPeriodo');
             if (panel.style.display === 'none' || panel.style.display === '') {
-                // Fecha o outro painel se estiver aberto
                 document.getElementById('editPanelFuncionario').style.display = 'none';
                 panel.style.display = 'block';
                 carregarDadosPeriodoParaEdicao();
@@ -458,7 +626,6 @@
     // Carrega os dados do período para edição
     function carregarDadosPeriodoParaEdicao() {
         const periodoText = document.getElementById('periodoDisplay').innerText;
-        // Formato esperado: "PERÍODO: MARÇO 01/03/2026 À 31/03/2026"
         const matches = periodoText.match(/PERÍODO:\s*(\w+)\s+(\d{2})\/(\d{2})\/(\d{4})\s+À\s+(\d{2})\/(\d{2})\/(\d{4})/);
         
         if (matches) {
@@ -490,11 +657,10 @@
         document.getElementById('displayDivisao').innerText = document.getElementById('editDivisao').value;
         document.getElementById('displayPasta').innerText = document.getElementById('editPasta').value;
         
-        // Fecha o painel após salvar
         document.getElementById('editPanelFuncionario').style.display = 'none';
-        
-        // Mostra mensagem de confirmação
-        alert('Dados do funcionário atualizados com sucesso!');
+        salvarDados(); // Salva no localStorage
+        gerarFolha(); // Atualiza a folha
+        mostrarToast('✓ Dados do funcionário salvos');
     }
 
     // Salva o período editado
@@ -510,17 +676,13 @@
         const periodoFormatado = `PERÍODO: ${mesExtenso} ${diaInicio}/${mesInicio}/${anoInicio} À ${diaFim}/${mesFim}/${anoFim}`;
         document.getElementById('periodoDisplay').innerText = periodoFormatado;
         
-        // Atualiza também o input de mês/ano para manter consistência
         document.getElementById('inputMesAno').value = `${anoInicio}-${mesInicio}`;
         
-        // Fecha o painel após salvar
         document.getElementById('editPanelPeriodo').style.display = 'none';
         
-        // Mostra mensagem de confirmação
-        alert('Período atualizado com sucesso!');
-        
-        // Regenera a folha com o novo mês/ano
-        gerarFolha();
+        salvarDados(); // Salva no localStorage
+        gerarFolha(); // Regenera a folha
+        mostrarToast('✓ Período atualizado');
     }
 
     // Função auxiliar para variação
@@ -565,11 +727,9 @@
         tbody.innerHTML = '';
 
         // Atualiza o período apenas se ele não foi editado manualmente
-        // Verifica se o período atual corresponde ao mês/ano selecionado
         const periodoAtual = document.getElementById('periodoDisplay').innerText;
         const periodoGerado = formatarPeriodo(mes, ano);
         
-        // Se o período atual não contém o mês/ano atual, atualiza
         if (!periodoAtual.includes(`${String(mes).padStart(2, '0')}/${ano}`)) {
             document.getElementById('periodoDisplay').innerText = periodoGerado;
         }
@@ -629,6 +789,9 @@
 
             tbody.appendChild(tr);
         }
+        
+        // Salva os dados automaticamente após gerar a folha
+        salvarDados();
     }
 
     function gerarPDF() {
@@ -649,8 +812,8 @@
         
         // Configurações otimizadas para o html2pdf
         const opt = {
-            margin:       [15, 15, 15, 15], // [top, right, bottom, left]
-            filename:     'RENOMEAR.pdf',
+            margin:       [15, 15, 15, 15],
+            filename:     'folha_ponto.pdf',
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { 
                 scale: 2,
@@ -668,7 +831,6 @@
             pagebreak: { mode: ['css', 'legacy'] }
         };
 
-        // Usa html2pdf com tratamento de erro
         try {
             html2pdf().set(opt).from(elemento).save();
         } catch (error) {
@@ -677,7 +839,13 @@
         }
     }
 
-    // Inicializa
+    // Adiciona evento para salvar dados quando qualquer input for alterado
+    document.querySelectorAll('input, select').forEach(element => {
+        element.addEventListener('change', salvarDados);
+    });
+
+    // Inicializa carregando os dados salvos
+    carregarDados();
     gerarFolha();
 </script>
 
